@@ -1,0 +1,44 @@
+version: "3.3"
+
+services:
+  mysql:
+    image: elestio/mysql:8.0
+    restart: always
+    hostname: mysql
+    volumes:
+      - ./storage/mysql:/var/lib/mysql
+    env_file:
+      - ./.env
+    ports:
+      - "172.17.0.1:50778:3306"
+
+  glpi:
+    image: elestio4test/glpi:latest
+    restart: always
+    hostname: glpi
+    ports:
+      - "172.17.0.1:22571:80"
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./storage/var/www/html/glpi/:/var/www/html/glpi
+    environment:
+      - TIMEZONE=Europe/Brussels
+
+  pma:
+    image: phpmyadmin
+    restart: always
+    links:
+      - mysql:mysql
+    ports:
+      - "172.17.0.1:22811:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${ADMIN_PASSWORD}
+      UPLOAD_LIMIT: 500M
+      MYSQL_USERNAME: glpi
+      MYSQL_ROOT_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      - mysql

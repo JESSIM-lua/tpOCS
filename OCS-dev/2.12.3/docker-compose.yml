@@ -1,0 +1,77 @@
+services:
+  ocsapplication:
+    #image: ocsinventory/ocsinventory-docker-image:2.12.3
+    # image: xarnia/ocsinventory-php-fixed:latest
+    image: anton12/ocsinventory-nonginx:latest
+    container_name: ocsinventory-server
+    restart: always
+    expose:
+      - "80"
+    dns:
+      - "10.10.0.2"
+    volumes:
+      - "perlcomdata:/etc/ocsinventory-server"
+      - "ocsreportsdata:/usr/share/ocsinventory-reports/ocsreports/extensions"
+      - "varlibdata:/var/lib/ocsinventory-reports"
+      - "httpdconfdata:/etc/apache2/conf-available"
+      - "profilesconfdata:/usr/share/ocsinventory-reports/ocsreports/config/profiles"
+      # - "./apache2/conf-available/zzz-ocsnginxrewrite.conf:/etc/apache2/conf-available/zzz-ocsnginxrewrite.conf"
+      # - "./apache2/auth/auth.htaccess:/etc/auth/auth.htaccess"
+    environment:
+      OCS_SERVER_NAME: proxy.ocs.local
+      OCS_DB_SERVER: ocsinventory-db
+      OCS_DB_USER: ocsuser
+      OCS_DB_PASS: ocspass
+      OCS_DB_NAME: ocsweb
+      # See documentation to set up SSL for MySQL
+      OCS_SSL_ENABLED: 0
+      OCS_DBI_PRINT_ERROR: 0
+    links:
+      - ocsdb
+    networks:
+      - localocs
+#      - traefik_network
+    depends_on:
+      - ocsdb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ocsapplication.rule=Host(`proxy.ocs.local`)"
+      - "traefik.http.routers.ocsapplication.entrypoints=websecure"
+      - "traefik.http.routers.ocsapplication.tls=true"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.regex=^https?://proxy.ocs.local/?$$"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.replacement=https://proxy.ocs.local/ocsreports/"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.permanent=true"
+#      - "traefik.http.routers.ocsapplication.middlewares=ocsapplication-redirect"
+      - "traefik.http.services.ocsapplication.loadbalancer.server.port=80"
+
+  ocsdb:
+    image: mysql:8.0
+    container_name: ocsinventory-db
+    restart: always
+    expose:
+      - "3306"
+    volumes:
+      - ./sql/:/docker-entrypoint-initdb.d/
+      - sqldata:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD : rootpass
+      MYSQL_USER : ocsuser
+      MYSQL_PASSWORD : ocspass
+      MYSQL_DATABASE : ocsweb
+    networks:
+      - localocs
+
+networks:
+#  traefik_network:
+#    external: true
+#    name: traefik_network
+  localocs:
+    external: true
+
+volumes:
+  perlcomdata:
+  ocsreportsdata:
+  varlibdata:
+  httpdconfdata:
+  sqldata:
+  profilesconfdata:

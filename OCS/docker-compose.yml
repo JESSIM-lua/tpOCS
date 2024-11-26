@@ -1,0 +1,84 @@
+services:
+  ocsapplication:
+    image: xarnia/ocsinventory-php-fixed:latest
+    restart: always
+    ports:
+      - "8081:80"
+
+    # dns:
+    #   - "10.10.0.2"
+    volumes:
+      - "perlcomdata:/etc/ocsinventory-server"
+      - "./ocs-extensions:/usr/share/ocsinventory-reports/ocsreports/extensions"
+      - "varlibdata:/var/lib/ocsinventory-reports"
+      - "httpdconfdata:/etc/apache2/conf-available"
+      - "profilesconfdata:/usr/share/ocsinventory-reports/ocsreports/config/profiles"
+      - "./apache2/sites-available/zzz-ocsnginxrewrite.conf:/etc/apache2/conf-available/zzz-ocsnginxrewrite.conf"
+      - "./apache2/auth/auth.htaccess:/etc/auth/auth.htaccess"
+    environment:
+      OCS_DB_SERVER: ocsdb
+      OCS_DB_USER: ocsuser
+      OCS_DB_PASS: ocspass
+      OCS_DB_NAME: ocsweb
+      SNMP_LINK_TAG: 0
+      # See documentation to set up SSL for MySQL
+      OCS_SSL_ENABLED: 0
+      OCS_DBI_PRINT_ERROR: 0
+    links:
+      - ocsdb
+    networks:
+      - localocs
+      - traefik_network
+    depends_on:
+      - ocsdb
+    labels:
+      - "traefik.enable=true"
+      # Main application (HTTPS)
+      - "traefik.http.routers.ocs-secure.rule=Host(`proxy.ocs.local`)"
+      - "traefik.http.routers.ocs-secure.entrypoints=websecure"
+      - "traefik.http.routers.ocs-secure.tls=true"
+      - "traefik.http.routers.ocs-secure.service=ocs-service"
+
+      # Download endpoint (HTTP)
+      - "traefik.http.routers.ocs-download.rule=Host(`proxy.ocs.local`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.ocs-download.entrypoints=web"
+      - "traefik.http.routers.ocs-download.service=ocs-service"
+
+      # Download endpoint (HTTPS)
+      - "traefik.http.routers.ocs-download-secure.rule=Host(`proxy.ocs.local`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.ocs-download-secure.entrypoints=websecure"
+      - "traefik.http.routers.ocs-download-secure.tls=true"
+      - "traefik.http.routers.ocs-download-secure.service=ocs-service"
+
+      # Shared service
+      - "traefik.http.services.ocs-service.loadbalancer.server.port=8899"
+
+  ocsdb:
+    image: mysql:8.0
+    restart: always
+    expose:
+      - "3306"
+    volumes:
+      - ./sql/:/docker-entrypoint-initdb.d/
+      - sqldata:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD : rootpass
+      MYSQL_USER : ocsuser
+      MYSQL_PASSWORD : ocspass
+      MYSQL_DATABASE : ocsweb
+    networks:
+      - localocs
+
+networks:
+  traefik_network:
+    external: true
+  localocs:
+    external: true
+
+volumes:
+  perlcomdata:
+  ocsreportsdata:
+  varlibdata:
+  httpdconfdata:
+  sqldata:
+  profilesconfdata:

@@ -1,0 +1,66 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services
+
+- Services TP OCS:
+    - OCSInventory:
+        href: https://proxy.ocs.local/
+        description: Serveur OCS-NG sur Docker
+        icon: https://ocsinventory-ng.org/wp-content/uploads/2019/04/cropped-AUTOCOLLANT-01-1-192x192.png
+        server: local-docker
+        container: ocsinventory-server
+        siteMonitor: https://proxy.ocs.local/
+
+    - GLPI:
+        href: https://glpi.ocs.local/
+        description: Instance GLPI inter-connectée à OCS
+        icon: sh-glpi.svg
+        server: local-docker
+        container: glpi_glpi
+        siteMonitor: https://glpi.ocs.local/
+
+    - PhpMyAdmin:
+        href: https://pma.ocs.local/
+        description: PMA connecté à la BDD de GLPI
+        icon: si-phpmyadmin-#6C78AF
+        server: local-docker
+        container: phpmyadmin_glpi
+        siteMonitor: https://pma.ocs.local/
+
+- Infrastructure:
+    - OPNSense:
+        href: https://opnsense.ocs.local/
+        description: Routeur du réseau LAN_OCS
+        icon: si-opnsense-#D94F00
+        siteMonitor: https://opnsense.ocs.local/
+
+    - Technitium DNS:
+        href: https://dns.ocs.local/
+        description: Serveur DNS du réseau LAN_OCS
+        icon: https://technitium.com/favicon.ico
+        siteMonitor: https://dns.ocs.local/
+    
+    - Proxmox VE:
+        href: https://proxmox.ocs.local:8006/
+        description: Serveur de virtualisation
+        icon: si-proxmox-#E57000
+        siteMonitor: https://proxmox.ocs.local:8006/
+
+    - Traefik:
+        href: https://traefik.ocs.local/
+        description: Proxy HTTPS pour docker
+        icon: si-traefikproxy-#24A1C1
+        server: local-docker
+        container: rproxy-traefik-1
+        siteMonitor: https://traefik.ocs.local/
+
+- Gestion:
+    - Apache Guacamole:
+        href: https://guac.ocs.local/
+        description: Serveur Bastion Apache Guacamole sur Docker
+        icon: si-apacheguacamole-#578B34
+        server: local-docker
+        container: guacamole_compose
+        siteMonitor: https://guac.ocs.local/
+
+

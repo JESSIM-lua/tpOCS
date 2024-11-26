@@ -1,0 +1,51 @@
+services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--log.level=DEBUG"  # Enable debug logging
+#      - "--api.insecure=true" #Debug
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=default"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+    ports:
+      - "80:80"
+      - "444:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./certs:/etc/certs:ro"  # Mount certificates
+      - "./dynamic:/etc/traefik/dynamic:ro"  # Mount dynamic configuration
+    networks:
+      - traefik_network
+      - localocs
+      - guacnetwork_compose
+      - glpi_network
+#    network_mode: "host"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.ocs.local`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+    restart: unless-stopped
+
+networks:
+  traefik_network:
+    name: traefik_network
+    external: true
+  localocs:
+    name: localocs
+    external: true
+  guacnetwork_compose:
+    name: guacnetwork_compose
+    external: true
+  glpi_network:
+    name: glpi_network
+    external: true

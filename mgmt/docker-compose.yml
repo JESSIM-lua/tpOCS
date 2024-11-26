@@ -1,0 +1,91 @@
+services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--log.level=DEBUG"  # Enable debug logging
+#      - "--api.insecure=true" #Debug
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+#      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+#      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--entrypoints.websecure.http.tls.certResolver=default"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+    ports:
+      - "8082:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./certs:/etc/certs:ro"  # Mount certificates
+      - "./dynamic:/etc/traefik/dynamic:ro"  # Mount dynamic configuration
+    networks:
+      - traefik_network
+      - localocs
+      - guacnetwork_compose
+      - glpi_network
+#    network_mode: "host"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.ocs.local`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+    restart: unless-stopped
+
+  openldap:
+    image: osixia/openldap:latest
+    hostname: ldap.ocs.local
+    dns:
+      - "10.10.0.2"
+    environment:
+      - LDAP_ORGANISATION="OCS Labo"
+      - LDAP_DOMAIN="ocs.local"
+      - LDAP_ADMIN_PASSWORD="123+aze"
+      - LDAP_TLS_CRT_FILENAME=local-cert.pem
+      - LDAP_TLS_KEY_FILENAME=local-key.pem
+      - LDAP_TLS_CA_CRT_FILENAME=local.csr
+      - LDAP_BASE_DN="dc=ocs,dc=local"
+    volumes:
+      - ./ldap-data/slapd/database:/var/lib/ldap
+      - ./ldap-data/slapd/config:/etc/ldap/sdlapd.d
+      - ./certs:/container/services/slapd/assets/certs
+    ports:
+      - 389:389
+      - 636:636
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    dns:
+      - "10.10.0.2"
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=ldap.ocs.local
+    expose:
+      - "80"
+    depends_on:
+      - openldap
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phpldapadmin.rule=Host(`ldapadmin.ocs.local`)"
+      - "traefik.http.routers.phpldapadmin.service=phpldapadmin"
+      - "traefik.http.routers.phpldapadmin.entrypoints=websecure"
+      - "traefik.http.routers.phpldapadmin.tls=true"
+      - "traefik.http.services.phpldapadmin.loadbalancer.server.port=80"
+    networks:
+      - traefik_network
+networks:
+  traefik_network:
+    name: traefik_network
+    external: true
+  localocs:
+    name: localocs
+    external: true
+  guacnetwork_compose:
+    name: guacnetwork_compose
+    external: true
+  glpi_network:
+    name: glpi_network
+    external: true

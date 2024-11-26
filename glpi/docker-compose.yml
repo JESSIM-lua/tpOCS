@@ -1,0 +1,104 @@
+# Docker compose pour GLPI dans le cadre du "TP de la mort"
+# GLPI + MYSQL + PMA dans glpi_network pour les communications internes
+# localocs pour la communication entre ocs et glpi
+services:
+  # BDD pour GLPI
+  mysql:
+    image: elestio/mysql:8.0
+    restart: always
+    container_name: mysql_glpi
+    volumes:
+      - ./storage/mysql:/var/lib/mysql
+    env_file:
+      # Mdp / user ...
+      - ./.env
+    # On expose le port 3306 dans le reseau glpi_network
+    expose:
+      - "3306"
+    ports:
+      - "3306"
+    networks:
+      - glpi_network
+
+  # Application GLPI
+  glpi:
+    # 10.0.7 pour Fusion Inventory
+    image: elestio/glpi:10.0.15
+    # DNS pour resolution de nom interne au projet (*.ocs.local)
+    dns:
+      - "10.10.0.2"
+    restart: always
+    container_name: glpi_glpi
+    # On expose le 80 pour traefik 
+    ports:
+      - "8084:80"
+    # Volumes et config necessaires
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./storage/var/www/html/glpi/:/var/www/html/glpi
+      - ./apache/php.ini:/etc/php/8.1/apache2/php.ini
+#      - ./startup-script.sh:/opt/startup_mod.sh
+#    entrypoint: ["/bin/bash", "/opt/startup_mod.sh"]
+    environment:
+      - TIMEZONE=Europe/Paris
+    # GLPI doit avoir une patte dans le reseau ocs pour communiquer avec ocsinventory-server
+    networks:
+      - glpi_network
+      - localocs
+    # Labels pour traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glpi.rule=Host(`glpi.ocs.local`)"
+      - "traefik.http.routers.glpi.entrypoints=websecure"
+      - "traefik.http.routers.glpi.tls=true"
+      # - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.regex=^https?://proxy.ocs.local/?$$"
+      # - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.replacement=https://proxy.ocs.local/ocsreports/"
+      # - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.permanent=true"
+      # - "traefik.http.routers.ocsapplication.middlewares=ocsapplication-redirect"  # Fixed typo here
+      - "traefik.http.services.glpi.loadbalancer.server.port=80"
+
+  # Phpmyadmin, gestion de la BDD mysql
+  pma:
+    image: phpmyadmin
+    restart: always
+    container_name: phpmyadmin_glpi
+    # On expose le 80 pour traefik
+    expose:
+      - "80"
+    # Variables d'environnement pour bind au serveur mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${ADMIN_PASSWORD}
+      UPLOAD_LIMIT: 500M
+      MYSQL_USERNAME: glpi
+      MYSQL_ROOT_PASSWORD: ${ADMIN_PASSWORD}
+    # Reseaux pour traefik
+    networks:
+      - glpi_network
+    # Labels de traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pma.rule=Host(`pma.ocs.local`)"
+      - "traefik.http.routers.pma.entrypoints=websecure"
+      - "traefik.http.routers.pma.tls=true"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.regex=^https?://proxy.ocs.local/?$$"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.replacement=https://proxy.ocs.local/ocsreports/"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.permanent=true"
+#      - "traefik.http.routers.ocsapplication.middlewares=ocsapplication-redirect"  # Fixed typo here
+      - "traefik.http.services.pma.loadbalancer.server.port=80"
+    depends_on:
+      - mysql
+
+# Definition des reseaux, glpi_network pour communications interne + traefik
+# localocs pour le serveur ocsinventory et la relation inter-services 
+# Tous en externe pour plus de practicite
+networks:
+  glpi_network:
+    external: true
+    name: glpi_network
+  localocs:
+    external: true
+    name: localocs

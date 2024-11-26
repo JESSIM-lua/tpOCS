@@ -1,0 +1,15 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/bookmarks
+
+- Github:
+    - Repo du TP:
+        - abbr: GH
+          href: https://github.com/Y0plait/TPdelamort
+
+- Sujet:
+    - Sujet en PDF:
+        - abbr: PDF
+          href: https://github.com/Y0plait/TPdelamort/blob/master/TP-OCS.pdf
+
+

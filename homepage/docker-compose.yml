@@ -1,0 +1,30 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    expose:
+      - "3000"
+    dns:
+      - "10.10.0.2"
+    ports:
+      - 3000
+    volumes:
+      - ./config:/app/config # Make sure your local config directory exists
+      - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.ocs.local`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls=true"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.regex=^https?://proxy.ocs.local/?$$"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.replacement=https://proxy.ocs.local/ocsreports/"
+#      - "traefik.http.middlewares.ocsapplication-redirect.redirectregex.permanent=true"
+#      - "traefik.http.routers.ocsapplication.middlewares=ocsapplication-redirect"  # Fixed typo here
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+
+networks:
+  traefik_network:
+    name: traefik_network
+    external: true

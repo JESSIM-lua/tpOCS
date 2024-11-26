@@ -1,0 +1,26 @@
+---
+#For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings
+
+title: TP OCS Homepage
+headerStyle: boxed
+language: fr
+showStats: true
+statusStyle: "basic"
+#useEqualHeights: true
+
+layout:
+  Services TP OCS:
+    # tab: OCS
+    style: row
+    columns: 3
+
+  Infrastructure:
+    # tab: Infra
+    #style: row
+    #columns: 2
+
+  Gestion:
+    # tab: Gestion
+    style: row
+    columns: 1
